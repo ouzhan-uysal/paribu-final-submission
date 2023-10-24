@@ -27,22 +27,25 @@ export const Web3AssistantContextProvider: FC<IGeneralContextProvider> = ({
   children,
 }) => {
   const [account, setAccount] = useState<IAccount>(null);
-  const { ethereum } = window as any;
 
-  if (ethereum) {
-    try {
-      ethereum.on("accountsChanged", (accounts: Array<string>) => {
-        setAccount(accounts.length > 0 ? accounts[0] : null);
-      });
-      ethereum.on("chainChanged", () => {
-        window.location.reload();
-      });
-    } catch (err) {
-      console.error(": ", err);
+  if (typeof window !== "undefined") {
+    const { ethereum } = window as any;
+    if (ethereum) {
+      try {
+        ethereum.on("accountsChanged", (accounts: Array<string>) => {
+          setAccount(accounts.length > 0 ? accounts[0] : null);
+        });
+        ethereum.on("chainChanged", () => {
+          window.location.reload();
+        });
+      } catch (err) {
+        console.error("err: ", err);
+      }
     }
   }
 
   const handleGetAccounts = useCallback(async () => {
+    const { ethereum } = window as any;
     if (ethereum) {
       try {
         const provider = new ethers.BrowserProvider(ethereum);
@@ -68,7 +71,7 @@ export const Web3AssistantContextProvider: FC<IGeneralContextProvider> = ({
           draggable: true,
           progress: undefined,
           theme: "dark",
-        },
+        }
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,6 +82,7 @@ export const Web3AssistantContextProvider: FC<IGeneralContextProvider> = ({
   }, [handleGetAccounts]);
 
   const connectToWallet = async () => {
+    const { ethereum } = window as any;
     if (ethereum) {
       try {
         const provider = new ethers.BrowserProvider(ethereum);
@@ -104,8 +108,9 @@ export const Web3AssistantContextProvider: FC<IGeneralContextProvider> = ({
 
   const contractCreate = async (
     contractAddress: string,
-    contractAbi: InterfaceAbi,
+    contractAbi: InterfaceAbi
   ) => {
+    const { ethereum } = window as any;
     if (ethereum) {
       try {
         const provider = new ethers.BrowserProvider(ethereum);
@@ -137,7 +142,7 @@ export const Web3AssistantContextProvider: FC<IGeneralContextProvider> = ({
       connectToWallet,
     }),
     // eslint-disable-next-line
-    [account],
+    [account]
   );
 
   return (

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import '../styles/styles.scss';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import ToastProvider from 'components/contexts/ToastContext';
+import { ToastContainer } from 'react-toastify';
 import { Web3AssistantContextProvider } from 'components/contexts/Web3AssistantContext';
 
 const inter = Inter({ subsets: ['latin'] })
@@ -19,13 +19,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <div className="context">
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </div>
-      </body>
+      <Web3AssistantContextProvider>
+        <body className={inter.className}>{children}</body>
+        <ToastContainer />
+      </Web3AssistantContextProvider>
     </html>
   )
 }
