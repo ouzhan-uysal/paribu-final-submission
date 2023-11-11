@@ -23,9 +23,9 @@
       }
     ],
     "paths": {
-      "components/*": [
+      "src/*": [
         "./src/*"
-      ]
+      ],
     }
   },
   "include": [

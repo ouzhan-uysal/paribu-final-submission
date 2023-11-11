@@ -11,19 +11,15 @@ import {
 } from "react";
 import { Contract, ethers, InterfaceAbi } from "ethers";
 import { toast } from "react-toastify";
-import {
-  IAccount,
-  IWeb3AssistantContext,
-  IGeneralContextProvider,
-} from "../interface/web3Assistant.interface";
+import { IAccount, IGeneralContextProvider, IWeb3AssistantContext } from "src/interface/web3.interface";
 
-export const Web3AssistantContext = createContext<IWeb3AssistantContext>({
+export const Web3Context = createContext<IWeb3AssistantContext>({
   account: null,
   contractCreate: () => false,
   connectToWallet: () => false,
 });
 
-export const Web3AssistantContextProvider: FC<IGeneralContextProvider> = ({
+export const Web3ContextProvider: FC<IGeneralContextProvider> = ({
   children,
 }) => {
   const [account, setAccount] = useState<IAccount>(null);
@@ -146,18 +142,16 @@ export const Web3AssistantContextProvider: FC<IGeneralContextProvider> = ({
   );
 
   return (
-    <Web3AssistantContext.Provider value={value}>
-      {children}
-    </Web3AssistantContext.Provider>
+    <Web3Context.Provider value={value}>
+      <>{children}</>
+    </Web3Context.Provider>
   );
 };
 
-export const useWeb3Assistant = () => {
-  const context = useContext(Web3AssistantContext);
+export const useWeb3 = () => {
+  const context = useContext(Web3Context);
   if (!context) {
-    throw new Error(
-      "useWeb3Assistant must be used within a Web3AssistantContextProvider!",
-    );
+    throw new Error("useWeb3 must be used within a Web3ContextProvider!");
   }
   return context;
 };

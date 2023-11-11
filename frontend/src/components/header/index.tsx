@@ -1,19 +1,19 @@
 
-import { useWeb3Assistant } from 'components/contexts/Web3AssistantContext';
 import React from 'react'
 import { Button } from 'react-bootstrap';
+import { useWeb3 } from 'src/contexts/Web3Context';
 
 const Header = () => {
-  const { account } = useWeb3Assistant();
+  const { account, connectToWallet } = useWeb3();
 
   return (
     <div className='header-container'>
       <div className="logo"></div>
       <div className="actions">
         {account ?
-          <Button>Profile</Button>
+          <Button disabled>{account.slice(0, 5)}...{account.slice(-5)}</Button>
           :
-          <Button>Connect</Button>
+          <Button onClick={connectToWallet}>Connect</Button>
         }
       </div>
     </div>
