@@ -1,144 +1,135 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
-contract EmlakKiralamaKontrati {
-    address public sahibi;
+contract RentalContract {
+    uint256 private propertyCount = 0;
 
-    struct Mulk {
-        address sahip;
-        string adres;
-        string tip;
-        uint256 kiraUcreti;
-        bool kiralandi;
-        address kiraci;
-        uint256 baslangicTarihi;
-        uint256 bitisTarihi;
+    struct Property {
+        uint256 propertyId;
+        address owner;
+        string propertyAddress;
+        string propertyType; // Home or Store
+        uint256 rentalFee;
+        bool isRented;
+        address tenant;
+        uint256 startDate;
+        uint256 endDate;
     }
 
-    Mulk[] public mulkler;
+    Property[] public properties;
 
-    mapping(address => bool) public kiraciMulkSahibi;
-    mapping(address => Mulk) public kiraciMulk;
-
-    event MulkEklendi(
-        address indexed sahip,
-        uint256 mulkID,
-        string adres,
-        string tip,
-        uint256 kiraUcreti
+    event AddedProperty(
+        address indexed owner,
+        uint256 propertyId,
+        string propertyAddress,
+        string propertyType,
+        uint256 rentalFee
     );
-    event BasvuruYapildi(
-        address indexed kiraci,
-        uint256 mulkID,
-        uint256 baslangicTarihi,
-        uint256 bitisTarihi
+    event AppliedProperty(
+        address indexed tenant,
+        uint256 propertyId,
+        uint256 startDate,
+        uint256 endDate
     );
-    event KiralamaOnaylandi(
-        address indexed sahip,
-        uint256 mulkID,
-        address indexed kiraci
+    event DeniedProperty(address indexed tenant, uint256 propertyId);
+    event ApprovedProperty(
+        address indexed owner,
+        uint256 propertyId,
+        address indexed tenant
     );
-    event SozlesmeSonlandirildi(address indexed kiraci, uint256 mulkID);
+    event SozlesmeSonlandirildi(address indexed tenant, uint256 propertyId);
 
-    constructor() {
-        sahibi = msg.sender;
-    }
-
-    modifier sadeceSahip() {
-        require(
-            msg.sender == sahibi,
-            "Bu islem sadece sahip tarafindan gerceklestirilebilir."
-        );
-        _;
-    }
-
-    function ilanAc(
-        string memory _adres,
-        string memory _tip,
-        uint256 _kiraUcreti
+    function postAnAd(
+        string memory _propertyAddress,
+        string memory _propertyType,
+        uint256 _rentalFee
     ) public {
-        require(
-            !kiraciMulkSahibi[msg.sender],
-            "Bir kiraci ayni zamanda bir mulk sahibi olamaz."
-        );
-
-        Mulk memory yeniMulk = Mulk({
-            sahip: msg.sender,
-            adres: _adres,
-            tip: _tip,
-            kiraUcreti: _kiraUcreti,
-            kiralandi: false,
-            kiraci: address(0),
-            baslangicTarihi: 0,
-            bitisTarihi: 0
+        Property memory newProperty = Property({
+            propertyId: propertyCount,
+            owner: msg.sender,
+            propertyAddress: _propertyAddress,
+            propertyType: _propertyType,
+            rentalFee: _rentalFee,
+            isRented: false,
+            tenant: address(0),
+            startDate: 0,
+            endDate: 0
         });
-        mulkler.push(yeniMulk);
-        emit MulkEklendi(
+        properties.push(newProperty);
+        propertyCount++;
+        emit AddedProperty(
             msg.sender,
-            mulkler.length - 1,
-            _adres,
-            _tip,
-            _kiraUcreti
+            properties.length - 1,
+            _propertyAddress,
+            _propertyType,
+            _rentalFee
         );
     }
 
-    function ilanlariListele() public view returns (Mulk[] memory) {
-        return mulkler;
+    function allPropertyList() public view returns (Property[] memory) {
+        return properties;
     }
 
-    function basvuruYap(
-        uint256 mulkID,
-        uint256 _baslangicTarihi,
-        uint256 _bitisTarihi
+    function applyToProperty(
+        uint256 _propertyId,
+        uint256 _startDate,
+        uint256 _endDate
     ) public {
-        require(mulkID < mulkler.length, "Gecersiz mulk ID.");
-        Mulk storage mulk = mulkler[mulkID];
+        require(_propertyId < properties.length, "Gecersiz mulk ID.");
+        Property storage property = properties[_propertyId];
+        require(property.isRented == false, "Bu mulk zaten kiralandi.");
+        require(property.owner != msg.sender, "Kendi mulkunu kiralayamazsin.");
         require(
-            !kiraciMulkSahibi[msg.sender],
-            "Bir kiraci ayni anda birden fazla mulk kiralayamaz."
-        );
-        require(mulk.kiralandi == false, "Bu mulk zaten kiralandi.");
-        require(mulk.sahip != msg.sender, "Kendi mulkunu kiralayamazsin.");
-        require(
-            _baslangicTarihi < _bitisTarihi,
+            _startDate < _endDate,
             "Baslangic tarihi bitis tarihinden once olmalidir."
         );
-
-        mulk.kiralandi = true;
-        mulk.kiraci = msg.sender;
-        mulk.baslangicTarihi = _baslangicTarihi;
-        mulk.bitisTarihi = _bitisTarihi;
-        kiraciMulkSahibi[msg.sender] = true;
-        kiraciMulk[msg.sender] = mulk;
-        emit BasvuruYapildi(msg.sender, mulkID, _baslangicTarihi, _bitisTarihi);
+        property.tenant = msg.sender;
+        property.startDate = _startDate;
+        property.endDate = _endDate;
+        emit AppliedProperty(msg.sender, _propertyId, _startDate, _endDate);
     }
 
-    function kiralamaOnayla(uint256 mulkID) public sadeceSahip {
-        require(mulkID < mulkler.length, "Gecersiz mulk ID.");
-        Mulk storage mulk = mulkler[mulkID];
-        require(mulk.kiralandi, "Bu mulk kiralanmamis.");
+    function approveRental(uint256 _propertyId) public {
+        require(_propertyId < properties.length, "Gecersiz mulk ID.");
+        Property storage property = properties[_propertyId];
         require(
-            mulk.sahip == msg.sender,
+            property.owner == msg.sender,
             "Sadece mulk sahibi kiralamayi onaylayabilir."
         );
-        emit KiralamaOnaylandi(msg.sender, mulkID, mulk.kiraci);
+        require(!property.isRented, "Bu mulk zaten onaylanmis.");
+        property.isRented = true;
+        emit ApprovedProperty(msg.sender, _propertyId, property.tenant);
     }
 
-    function sozlesmeSonlandir() public {
-        Mulk storage mulk = kiraciMulk[msg.sender];
-        require(mulk.kiraci == msg.sender, "Bu mulkun kiracisi degilsiniz.");
+    function denyRental(uint256 _propertyId) public {
+        require(_propertyId < properties.length, "Gecersiz mulk ID.");
+        Property storage property = properties[_propertyId];
         require(
-            block.timestamp >= mulk.bitisTarihi ||
-                block.timestamp + 15 days >= mulk.bitisTarihi,
-            "Sozlezme henuz sona ermedi."
+            property.owner == msg.sender,
+            "Sadece mulk sahibi kiralamayi reddedebilir."
         );
+        require(!property.isRented, "Bu mulk zaten onaylanmis.");
+        property.isRented = false;
+        property.tenant = address(0);
+        property.startDate = 0;
+        property.endDate = 0;
+        emit DeniedProperty(msg.sender, _propertyId);
+    }
 
-        delete kiraciMulk[msg.sender];
-        mulk.kiralandi = false;
-        mulk.kiraci = address(0);
-        mulk.baslangicTarihi = 0;
-        mulk.bitisTarihi = 0;
-        kiraciMulkSahibi[msg.sender] = false;
-        // emit SozlesmeSonlandirildi(msg.sender, mulkler.indexOf(mulk));
+    function terminateToProperty(uint256 _propertyId) public {
+        Property storage property = properties[_propertyId];
+        require(
+            property.tenant == msg.sender,
+            "Bu mulkun kiracisi degilsiniz."
+        );
+        // require(
+        //     block.timestamp + 15 days >= property.endDate,
+        //     "Sozlezme henuz sona ermedi."
+        // );
+        property.isRented = false;
+        property.tenant = address(0);
+        property.startDate = 0;
+        property.endDate = 0;
+        emit SozlesmeSonlandirildi(msg.sender, property.propertyId);
     }
 }
