@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Form, Modal, Tab, Tabs } from 'react-bootstrap';
 import Header from 'src/components/header';
+import Loader from 'src/components/loader';
 import PropertyCard from 'src/components/property-card';
 import { useWeb3 } from 'src/contexts/Web3Context';
 import { abi } from 'src/contracts';
@@ -9,8 +10,8 @@ import { IProperty } from 'src/interface/property.interface';
 export default function Home() {
   const { account, contractCreate } = useWeb3();
   const [showModal, setShowModal] = useState<boolean>(false);
-  const [propertyList, setPropertyList] = useState<Array<IProperty>>([]);
-  const [myProperties, setMyProperties] = useState<IProperty | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [allPropertyList, setAllPropertyList] = useState<Array<IProperty>>([]);
 
   const [createFields, setCreateFields] = useState<{
     address: string;
@@ -20,88 +21,152 @@ export default function Home() {
     address: "",
     type: "",
     amount: 0,
-  })
+  });
+  const [applyFields, setApplyFields] = useState<{
+    startDate: number;
+    endDate: number;
+  }>({
+    startDate: Date.now(),
+    endDate: Date.now(),
+  });
 
-  const handleGetPropertyList = useCallback(async () => {
+  const handleGetAllProperties = useCallback(async () => {
     const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
     if (contract) {
-      const propertyListAction = await contract.ilanlariListele()
-        .then(res => res)
-        .catch(err => console.error("ilanlariListele err: ", err));
-      setPropertyList(propertyListAction.map((elm: any, index: number) => ({
-        id: index,
-        owner: elm[0],
-        address: elm[1],
-        type: elm[2],
-        amount: Number(elm[3]),
-        status: elm[4],
-        tenant: elm[5],
-      })));
+      await contract.allPropertyList()
+        .then(res => {
+          setAllPropertyList(res.map((property: any) => ({
+            propertyId: Number(property[0]),
+            owner: property[1],
+            address: property[2],
+            type: property[3],
+            amount: Number(property[4]),
+            isRented: property[5],
+            tenant: property[6],
+            startDate: Number(property[7]),
+            endDate: Number(property[8]),
+          })));
+        })
+        .catch(err => console.error("allPropertyList err: ", err));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleGetMyProperties = useCallback(async () => {
+  const handleGetAwaitingApproveProperties = useCallback(async () => {
     const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
     if (contract) {
-      const tenantProperty = await contract.kiraciMulk(account);
-      // console.log("tenantProperty: ", tenantProperty);
-      setMyProperties(tenantProperty);
+      await contract.awaitingApproval()
+        .then(res => {
+          setAllPropertyList(res.map((property: any) => ({
+            propertyId: Number(property[0]),
+            owner: property[1],
+            address: property[2],
+            type: property[3],
+            amount: Number(property[4]),
+            isRented: property[5],
+            tenant: property[6],
+            startDate: Number(property[7]),
+            endDate: Number(property[8]),
+          })));
+        })
+        .catch(err => console.error("allPropertyList err: ", err));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    handleGetPropertyList();
-    handleGetMyProperties();
-  }, [handleGetMyProperties, handleGetPropertyList]);
+    handleGetAllProperties();
+    handleGetAwaitingApproveProperties();
+  }, [handleGetAllProperties, handleGetAwaitingApproveProperties]);
 
   const handlePostAd = async () => {
     const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi);
     if (contract) {
       const createAction = await contract.ilanAc(createFields.address, createFields.type, createFields.amount).then(res => res).catch(err => console.error("ilanAc err: ", err));
       await createAction.wait();
-      handleGetPropertyList();
+      handleGetAllProperties();
       setShowModal(false);
     }
   }
+
+  const handleApply = async (propertyId: any) => {
+    setIsLoading(true);
+    const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
+    if (contract) {
+      const applyAction = await contract.applyToProperty(propertyId, applyFields.startDate, applyFields.endDate);
+      await applyAction.wait();
+      handleGetAllProperties();
+    }
+    setIsLoading(false);
+  };
+
+  const handleTerminate = async (properyId: any) => {
+    setIsLoading(true);
+    const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
+    if (contract) {
+      const terminateAction = await contract.sozlesmeyiSonlandir(properyId);
+      await terminateAction.wait();
+      handleGetAllProperties();
+    }
+    setIsLoading(false);
+  };
+
+  const handleApprove = async (propertyId: any) => {
+    setIsLoading(true);
+    const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
+    if (contract) {
+      const approveAction = await contract.approveRental(propertyId);
+      await approveAction.wait();
+      handleGetAllProperties();
+    }
+    setIsLoading(false);
+  }
+
+  console.log("allPropertyList: ", allPropertyList);
 
   return (
     <div className='container p-3'>
       <Header />
       <div className='main'>
+        {isLoading && <Loader />}
         <Tabs defaultActiveKey="properties" className="mb-3">
           <Tab eventKey="properties" title="Home">
             <div className="row">
-              {propertyList.map((property, index) => (
+              {allPropertyList.map((property, index) => (
                 <div className="col" key={index}>
-                  <PropertyCard property={property} operation="Apply" />
+                  <PropertyCard property={property} operation="Apply" setIsLoading={setIsLoading} onClick={handleApply} applyFields={applyFields} setApplyFields={setApplyFields} />
                 </div>
               ))}
             </div>
           </Tab>
           <Tab eventKey="profile" title="Profile" disabled={!account}>
-            <div className="row w-100">
+            <div className="row">
               <div className="col-12 text-end">
-                <Button onClick={() => setShowModal(true)}>Post a ad</Button>
+                <Button onClick={() => setShowModal(true)}>New Advertise for Property</Button>
               </div>
-              {/* {myProperties.map((property, index) => (
-                  <div className="col" key={index}>
-                    <PropertyCard property={property} />
-                  </div>
-                ))} */}
-              <div className="col">
-                <PropertyCard property={{
-                  type: "Store",
-                  amount: 50
-                }} operation="Terminate" />
+              <div className="col-12">
+                <h5 className='text-primary text-center'>Kiraladığım Mülkler</h5>
               </div>
-              <div className="col">
-                <PropertyCard property={{
-                  type: "Home",
-                  amount: 50
-                }} operation="Terminate" />
+              {allPropertyList.filter(property => property.tenant.toLowerCase() === account?.toLowerCase() && property.isRented).map((property, index) => (
+                <div className="col-auto" key={index}>
+                  <PropertyCard property={property} operation="Terminate" setIsLoading={setIsLoading} onClick={handleTerminate} />
+                </div>
+              ))}
+              <div className="col-12 mt-5">
+                <h5 className='text-primary text-center'>Kiralanan Mülklerim</h5>
               </div>
+              {allPropertyList.filter(property => property.owner.toLowerCase() === account?.toLowerCase() && property.isRented).map((property, index) => (
+                <div className="col-auto" key={index}>
+                  <PropertyCard property={property} operation="Terminate" setIsLoading={setIsLoading} onClick={handleTerminate} />
+                </div>
+              ))}
+              <div className="col-12 mt-5">
+                <h5 className='text-primary text-center'>Onay Bekleyen Mülklerim</h5>
+              </div>
+              {allPropertyList.filter(property => property.owner.toLowerCase() === account?.toLowerCase() && property.tenant !== "0x0000000000000000000000000000000000000000" && property.startDate > 0 && property.endDate > 0).map((property, index) => (
+                <div className="col-auto" key={index}>
+                  <PropertyCard property={property} operation="Approve" setIsLoading={setIsLoading} onClick={handleApprove} />
+                </div>
+              ))}
             </div>
           </Tab>
         </Tabs>

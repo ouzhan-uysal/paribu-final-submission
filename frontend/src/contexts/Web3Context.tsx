@@ -112,7 +112,6 @@ export const Web3ContextProvider: FC<IGeneralContextProvider> = ({
         const provider = new ethers.BrowserProvider(ethereum);
         const signer = await provider.getSigner();
         const contract = new Contract(contractAddress, contractAbi, signer);
-        console.log("contract: ", contractAbi);
         return contract;
       } catch (err) {
         console.error(err);

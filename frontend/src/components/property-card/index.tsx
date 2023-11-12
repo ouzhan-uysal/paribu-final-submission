@@ -1,43 +1,27 @@
 import Image from 'next/image';
-import React, { FC, useState } from 'react';
-import { Button, Form, FormGroup, Modal } from 'react-bootstrap';
+import React, { Dispatch, FC, SetStateAction, useState } from 'react';
+import { Button, Modal } from 'react-bootstrap';
 import { useWeb3 } from 'src/contexts/Web3Context';
-import { abi } from 'src/contracts';
 import { IProperty } from 'src/interface/property.interface';
 
 type IPropertyCard = {
   property: IProperty;
-  operation: "Apply" | "Terminate";
-}
-
-const PropertyCard: FC<IPropertyCard> = ({ property, operation }) => {
-  const { account, contractCreate } = useWeb3();
-  const [applyModal, setApplyModal] = useState<boolean>(false);
-
-  const [applyFields, setApplyFields] = useState<{
+  operation: "Apply" | "Terminate" | "Approve";
+  onClick: (propertyId: any) => void;
+  setIsLoading: Dispatch<SetStateAction<boolean>>;
+  applyFields?: {
     startDate: number;
     endDate: number;
-  }>({
-    startDate: Date.now(),
-    endDate: Date.now()
-  });
-
-
-  const handleApply = async () => {
-    const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
-    if (contract) {
-      const applyAction = await contract.basvuruYap(property.id, applyFields.startDate, applyFields.endDate);
-      await applyAction.wait();
-    }
   };
+  setApplyFields?: Dispatch<SetStateAction<{
+    startDate: number;
+    endDate: number;
+  }>>;
+}
 
-  const handleTerminate = async () => {
-    const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
-    if (contract) {
-      const terminateAction = await contract.sozlesmeyiSonlandir();
-      await terminateAction.wait();
-    }
-  };
+const PropertyCard: FC<IPropertyCard> = ({ property, operation, onClick, applyFields, setApplyFields }) => {
+  const { account } = useWeb3();
+  const [applyModal, setApplyModal] = useState<boolean>(false);
 
   return (
     <div className='property-card-container'>
@@ -45,74 +29,60 @@ const PropertyCard: FC<IPropertyCard> = ({ property, operation }) => {
       <h3>
         <span className='text-muted'>Type: </span>{property.type}
       </h3>
-      <h5>
+      <h4>
         <span className='text-muted'>Amount: </span>{property.amount}
+      </h4>
+      <h5>
+        <span className='text-muted'>Address: </span>{property.address}
       </h5>
 
       <Button
+        variant={(operation === "Apply" && (property.owner?.toLocaleLowerCase() === account?.toLocaleLowerCase() || property.isRented))
+          ? 'danger' : operation === "Approve" ? 'warning' : 'primary'}
         onClick={() => operation === "Apply"
           ? setApplyModal(true)
-          : operation === "Terminate"
-            ? handleTerminate()
-            : {}}
-        disabled={(operation === "Apply" && property.owner?.toLocaleLowerCase() === account?.toLocaleLowerCase())
+          : onClick(property.propertyId)}
+        disabled={(operation === "Apply" && (property.owner?.toLocaleLowerCase() === account?.toLocaleLowerCase() || property.isRented || property.tenant !== "0x0000000000000000000000000000000000000000"))
           ? true : false}>
         {(operation === "Apply" && property.owner?.toLocaleLowerCase() === account?.toLocaleLowerCase())
-          ? 'Already Your Property'
-          : operation}
+          ? 'Your Property'
+          : operation === "Apply" && property.tenant !== "0x0000000000000000000000000000000000000000" ? 'Pending Approval' : operation === "Apply" && property.isRented ? 'Rented'
+            : operation}
       </Button>
 
-
-      <Modal show={applyModal} onHide={() => setApplyModal(false)}>
+      {applyFields && setApplyFields && <Modal show={applyModal} onHide={() => setApplyModal(false)} size='lg'>
         <Modal.Header closeButton>
           <Modal.Title>Post Property</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form>
-            <FormGroup>
-              <input type="date" name="" id="" />
-              {/* <DatePicker
-              // value={this.state.value}
-              // onChange={handleChange}
-              /> */}
-            </FormGroup>
-            <FormGroup>
-              <input type="date" name="" id="" />
-              {/* <DatePicker
-              // value={this.state.value}
-              // onChange={handleChange}
-              /> */}
-            </FormGroup>
-            {/* <Form.Group className="mb-3" controlId="address">
-              <Form.Control
-                type="text"
-                placeholder="Address"
-                value={createFields.address}
-                onChange={(e) => setCreateFields(prev => ({ ...prev, address: e.target.value }))} />
-            </Form.Group>
-            <Form.Select className="mb-3"
-              aria-label="Select property type"
-              value={createFields.type}
-              onChange={(e) => setCreateFields(prev => ({ ...prev, type: e.target.value }))}>
-              <option value="" disabled>Select property type</option>
-              <option value="Home">Home</option>
-              <option value="Store">Store</option>
-            </Form.Select>
-            <Form.Group className="mb-3" controlId="amount">
-              <Form.Control
-                type="number"
-                placeholder="Amount"
-                value={createFields.amount}
-                onChange={(e) => setCreateFields(prev => ({ ...prev, amount: Number(e.target.value) }))} />
-            </Form.Group> */}
-          </Form>
+          <div className="row g-3 align-items-center">
+            <div className="col-sm-12 col-md-6">
+              <label htmlFor="startdate" className='fw-bold'>Start Date:</label>
+            </div>
+            <div className="col-sm-12 col-md-6">
+              <input id='startdate' type="date" className='custom-date-container'
+                value={new Date(applyFields.startDate).toISOString().substring(0, 10)}
+                onChange={(e) => setApplyFields(prev => ({ ...prev, startDate: e.target.valueAsNumber }))} />
+            </div>
+            <div className="col-sm-12 col-md-6">
+              <label htmlFor="enddate" className='fw-bolder'>End Date:</label>
+            </div>
+            <div className="col-sm-12 col-md-6">
+              <input id='enddate' type="date" className='custom-date-container'
+                value={new Date(applyFields.endDate).toISOString().substring(0, 10)}
+                onChange={(e) => setApplyFields(prev => ({ ...prev, endDate: e.target.valueAsNumber }))} />
+            </div>
+          </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={handleApply}>
+          <Button variant="primary" onClick={async () => {
+            await onClick(property.propertyId);
+            setApplyModal(false);
+          }}>
             Apply
           </Button>
         </Modal.Footer>
-      </Modal>
+      </Modal>}
     </div>
   )
 }
