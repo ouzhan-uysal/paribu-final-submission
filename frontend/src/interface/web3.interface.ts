@@ -1,12 +1,12 @@
 import { ReactNode } from "react";
-import { InterfaceAbi, BytesLike } from "ethers";
+import { InterfaceAbi } from "ethers";
 import { Contract } from "ethers";
 
 export type IAccount = string | null;
 
 export interface IWeb3AssistantContext {
   account: string | null;
-  contractCreate: (contractAddress: string, contractAbi: InterfaceAbi) => void;
+  contractCreate: (contractAddress: string, contractAbi: InterfaceAbi) => Contract | undefined;
   connectToWallet: () => void;
 }
 

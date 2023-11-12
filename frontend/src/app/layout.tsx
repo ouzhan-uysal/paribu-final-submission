@@ -19,10 +19,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <Web3ContextProvider>
-        <body className={inter.className}>{children}</body>
-        <ToastContainer />
-      </Web3ContextProvider>
-    </html>
+      <body className={inter.className}>
+        <Web3ContextProvider>
+          {children}
+          <ToastContainer />
+        </Web3ContextProvider>
+      </body>
+    </html >
   )
 }

@@ -15,7 +15,7 @@ import { IAccount, IGeneralContextProvider, IWeb3AssistantContext } from "src/in
 
 export const Web3Context = createContext<IWeb3AssistantContext>({
   account: null,
-  contractCreate: () => false,
+  contractCreate: () => undefined,
   connectToWallet: () => false,
 });
 
@@ -105,16 +105,18 @@ export const Web3ContextProvider: FC<IGeneralContextProvider> = ({
   const contractCreate = async (
     contractAddress: string,
     contractAbi: InterfaceAbi
-  ) => {
+  ): Promise<Contract | undefined> => {
     const { ethereum } = window as any;
     if (ethereum) {
       try {
         const provider = new ethers.BrowserProvider(ethereum);
         const signer = await provider.getSigner();
         const contract = new Contract(contractAddress, contractAbi, signer);
+        console.log("contract: ", contractAbi);
         return contract;
       } catch (err) {
         console.error(err);
+        return undefined;
       }
     } else {
       console.error("Install Metamask Extension!");
@@ -128,6 +130,7 @@ export const Web3ContextProvider: FC<IGeneralContextProvider> = ({
         progress: undefined,
         theme: "dark",
       });
+      return undefined;
     }
   };
 
@@ -143,7 +146,7 @@ export const Web3ContextProvider: FC<IGeneralContextProvider> = ({
 
   return (
     <Web3Context.Provider value={value}>
-      <>{children}</>
+      {children}
     </Web3Context.Provider>
   );
 };

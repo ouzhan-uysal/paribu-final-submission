@@ -1,4 +1,15 @@
 .property-card-container {
+  text-align: center;
+  img {
+    height: 150px;
+    padding: 1rem;
+  }
+  h3 {
+    font-size: large;
+  }
+  h5 {
+    font-size: medium;
+  }
   button {
     width: 100%;
   }
