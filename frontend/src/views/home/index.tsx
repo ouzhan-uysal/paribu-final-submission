@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Form, Modal, Tab, Tabs } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Header from 'src/components/header';
 import Loader from 'src/components/loader';
 import PropertyCard from 'src/components/property-card';
 import { useWeb3 } from 'src/contexts/Web3Context';
-import { abi } from 'src/contracts';
 import { IProperty } from 'src/interface/property.interface';
 
 export default function Home() {
@@ -31,10 +31,10 @@ export default function Home() {
   });
 
   const handleGetAllProperties = useCallback(async () => {
-    const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
+    const contract = await contractCreate();
     if (contract) {
       await contract.allPropertyList()
-        .then(res => {
+        .then((res: any) => {
           setAllPropertyList(res.map((property: any) => ({
             propertyId: Number(property[0]),
             owner: property[1],
@@ -47,81 +47,116 @@ export default function Home() {
             endDate: Number(property[8]),
           })));
         })
-        .catch(err => console.error("allPropertyList err: ", err));
+        .catch((err: any) => console.error("allPropertyList err: ", err));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleGetAwaitingApproveProperties = useCallback(async () => {
-    const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
-    if (contract) {
-      await contract.awaitingApproval()
-        .then(res => {
-          setAllPropertyList(res.map((property: any) => ({
-            propertyId: Number(property[0]),
-            owner: property[1],
-            address: property[2],
-            type: property[3],
-            amount: Number(property[4]),
-            isRented: property[5],
-            tenant: property[6],
-            startDate: Number(property[7]),
-            endDate: Number(property[8]),
-          })));
-        })
-        .catch(err => console.error("allPropertyList err: ", err));
-    }
-  }, []);
-
   useEffect(() => {
     handleGetAllProperties();
-    handleGetAwaitingApproveProperties();
-  }, [handleGetAllProperties, handleGetAwaitingApproveProperties]);
+  }, [handleGetAllProperties]);
 
   const handlePostAd = async () => {
-    const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi);
+    setIsLoading(true);
+    const contract = await contractCreate();
     if (contract) {
-      const createAction = await contract.ilanAc(createFields.address, createFields.type, createFields.amount).then(res => res).catch(err => console.error("ilanAc err: ", err));
-      await createAction.wait();
+      await contract.postAnAd(createFields.address, createFields.type, createFields.amount).then((res: any) => res.wait()).catch((err: any) =>
+        toast.error(err.reason, {
+          position: "top-right",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        }));
       handleGetAllProperties();
-      setShowModal(false);
+      window.location.reload();
     }
+    setIsLoading(false);
   }
 
-  const handleApply = async (propertyId: any) => {
+  const handleApply = async (propertyId: number) => {
     setIsLoading(true);
-    const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
+    const contract = await contractCreate();
     if (contract) {
-      const applyAction = await contract.applyToProperty(propertyId, applyFields.startDate, applyFields.endDate);
-      await applyAction.wait();
+      await contract.applyToProperty(propertyId, applyFields.startDate, applyFields.endDate).then((res: any) => res.wait()).catch((err: any) =>
+        toast.error(err.reason, {
+          position: "top-right",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        }));
       handleGetAllProperties();
     }
     setIsLoading(false);
   };
 
-  const handleTerminate = async (properyId: any) => {
+  const handleTerminate = async (properyId: number) => {
     setIsLoading(true);
-    const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
+    const contract = await contractCreate();
     if (contract) {
-      const terminateAction = await contract.sozlesmeyiSonlandir(properyId);
-      await terminateAction.wait();
+      await contract.terminateToProperty(properyId).then((res: any) => res.wait()).catch((err: any) =>
+        toast.error(err.reason, {
+          position: "top-right",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        })
+      );
       handleGetAllProperties();
     }
     setIsLoading(false);
   };
 
-  const handleApprove = async (propertyId: any) => {
+  const handleApprove = async (propertyId: number) => {
     setIsLoading(true);
-    const contract = await contractCreate(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi)
+    const contract = await contractCreate();
     if (contract) {
-      const approveAction = await contract.approveRental(propertyId);
-      await approveAction.wait();
+      await contract.approveRental(propertyId).then((res: any) => res.wait()).catch((err: any) =>
+        toast.error(err.reason, {
+          position: "top-right",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        }));
       handleGetAllProperties();
     }
     setIsLoading(false);
   }
 
-  console.log("allPropertyList: ", allPropertyList);
+  const handleDeny = async (propertyId: number) => {
+    setIsLoading(true);
+    const contract = await contractCreate();
+    if (contract) {
+      await contract.denyRental(propertyId).then((res: any) => res.wait()).catch((err: any) =>
+        toast.error(err.reason, {
+          position: "top-right",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        }));
+      handleGetAllProperties();
+    }
+    setIsLoading(false);
+  }
 
   return (
     <div className='container p-3'>
@@ -141,7 +176,7 @@ export default function Home() {
           <Tab eventKey="profile" title="Profile" disabled={!account}>
             <div className="row">
               <div className="col-12 text-end">
-                <Button onClick={() => setShowModal(true)}>New Advertise for Property</Button>
+                <Button onClick={() => setShowModal(true)}>Yeni İlan</Button>
               </div>
               <div className="col-12">
                 <h5 className='text-primary text-center'>Kiraladığım Mülkler</h5>
@@ -156,15 +191,15 @@ export default function Home() {
               </div>
               {allPropertyList.filter(property => property.owner.toLowerCase() === account?.toLowerCase() && property.isRented).map((property, index) => (
                 <div className="col-auto" key={index}>
-                  <PropertyCard property={property} operation="Terminate" setIsLoading={setIsLoading} onClick={handleTerminate} />
+                  <PropertyCard property={property} operation={undefined} setIsLoading={setIsLoading} onClick={() => { }} />
                 </div>
               ))}
               <div className="col-12 mt-5">
-                <h5 className='text-primary text-center'>Onay Bekleyen Mülklerim</h5>
+                <h5 className='text-primary text-center'>Onay Bekleyen Mülkler</h5>
               </div>
-              {allPropertyList.filter(property => property.owner.toLowerCase() === account?.toLowerCase() && property.tenant !== "0x0000000000000000000000000000000000000000" && property.startDate > 0 && property.endDate > 0).map((property, index) => (
+              {allPropertyList.filter(property => property.owner.toLowerCase() === account?.toLowerCase() && property.tenant !== "0x0000000000000000000000000000000000000000" && property.startDate > 0 && property.endDate > 0 && !property.isRented).map((property, index) => (
                 <div className="col-auto" key={index}>
-                  <PropertyCard property={property} operation="Approve" setIsLoading={setIsLoading} onClick={handleApprove} />
+                  <PropertyCard property={property} operation="Approve" setIsLoading={setIsLoading} onClick={handleApprove} handleDeny={handleDeny} />
                 </div>
               ))}
             </div>
@@ -172,9 +207,9 @@ export default function Home() {
         </Tabs>
       </div>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
+      <Modal show={showModal} onHide={() => setShowModal(false)} size='sm' centered>
         <Modal.Header closeButton>
-          <Modal.Title>Post Property</Modal.Title>
+          <Modal.Title>Yeni İlan</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>

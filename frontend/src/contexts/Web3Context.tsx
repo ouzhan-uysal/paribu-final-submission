@@ -12,6 +12,7 @@ import {
 import { Contract, ethers, InterfaceAbi } from "ethers";
 import { toast } from "react-toastify";
 import { IAccount, IGeneralContextProvider, IWeb3AssistantContext } from "src/interface/web3.interface";
+import { abi } from "src/contracts";
 
 export const Web3Context = createContext<IWeb3AssistantContext>({
   account: null,
@@ -103,15 +104,13 @@ export const Web3ContextProvider: FC<IGeneralContextProvider> = ({
   };
 
   const contractCreate = async (
-    contractAddress: string,
-    contractAbi: InterfaceAbi
   ): Promise<Contract | undefined> => {
     const { ethereum } = window as any;
     if (ethereum) {
       try {
         const provider = new ethers.BrowserProvider(ethereum);
         const signer = await provider.getSigner();
-        const contract = new Contract(contractAddress, contractAbi, signer);
+        const contract = new Contract(process.env.NEXT_PUBLIC_RENTAL_CONTRACT as string, abi, signer);
         return contract;
       } catch (err) {
         console.error(err);

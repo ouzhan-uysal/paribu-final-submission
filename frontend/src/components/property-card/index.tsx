@@ -6,8 +6,9 @@ import { IProperty } from 'src/interface/property.interface';
 
 type IPropertyCard = {
   property: IProperty;
-  operation: "Apply" | "Terminate" | "Approve";
-  onClick: (propertyId: any) => void;
+  operation: "Apply" | "Terminate" | "Approve" | undefined;
+  onClick: (propertyId: number) => void;
+  handleDeny?: (propertyId: number) => void;
   setIsLoading: Dispatch<SetStateAction<boolean>>;
   applyFields?: {
     startDate: number;
@@ -19,7 +20,7 @@ type IPropertyCard = {
   }>>;
 }
 
-const PropertyCard: FC<IPropertyCard> = ({ property, operation, onClick, applyFields, setApplyFields }) => {
+const PropertyCard: FC<IPropertyCard> = ({ property, operation, onClick, applyFields, setApplyFields, handleDeny }) => {
   const { account } = useWeb3();
   const [applyModal, setApplyModal] = useState<boolean>(false);
 
@@ -35,8 +36,11 @@ const PropertyCard: FC<IPropertyCard> = ({ property, operation, onClick, applyFi
       <h5>
         <span className='text-muted'>Address: </span>{property.address}
       </h5>
+      {(operation === "Terminate" || operation === undefined) && <h5>
+        <span className='text-muted'>End Date: </span>{new Date(property.endDate).toLocaleDateString("tr")}
+      </h5>}
 
-      <Button
+      {operation && <Button
         variant={(operation === "Apply" && (property.owner?.toLocaleLowerCase() === account?.toLocaleLowerCase() || property.isRented))
           ? 'danger' : operation === "Approve" ? 'warning' : 'primary'}
         onClick={() => operation === "Apply"
@@ -46,28 +50,30 @@ const PropertyCard: FC<IPropertyCard> = ({ property, operation, onClick, applyFi
           ? true : false}>
         {(operation === "Apply" && property.owner?.toLocaleLowerCase() === account?.toLocaleLowerCase())
           ? 'Your Property'
-          : operation === "Apply" && property.tenant !== "0x0000000000000000000000000000000000000000" ? 'Pending Approval' : operation === "Apply" && property.isRented ? 'Rented'
+          : operation === "Apply" && property.isRented ? 'Rented' : operation === "Apply" && property.tenant !== "0x0000000000000000000000000000000000000000"
+            ? 'Pending Approval'
             : operation}
-      </Button>
+      </Button>}
+      {operation === "Approve" && handleDeny && <Button variant='danger' onClick={() => handleDeny(property.propertyId)}>Deny</Button>}
 
-      {applyFields && setApplyFields && <Modal show={applyModal} onHide={() => setApplyModal(false)} size='lg'>
+      {applyFields && setApplyFields && <Modal show={applyModal} onHide={() => setApplyModal(false)} size='sm' centered>
         <Modal.Header closeButton>
-          <Modal.Title>Post Property</Modal.Title>
+          <Modal.Title>Make Application</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <div className="row g-3 align-items-center">
-            <div className="col-sm-12 col-md-6">
+            <div className="col">
               <label htmlFor="startdate" className='fw-bold'>Start Date:</label>
             </div>
-            <div className="col-sm-12 col-md-6">
+            <div className="col">
               <input id='startdate' type="date" className='custom-date-container'
                 value={new Date(applyFields.startDate).toISOString().substring(0, 10)}
                 onChange={(e) => setApplyFields(prev => ({ ...prev, startDate: e.target.valueAsNumber }))} />
             </div>
-            <div className="col-sm-12 col-md-6">
+            <div className="col">
               <label htmlFor="enddate" className='fw-bolder'>End Date:</label>
             </div>
-            <div className="col-sm-12 col-md-6">
+            <div className="col">
               <input id='enddate' type="date" className='custom-date-container'
                 value={new Date(applyFields.endDate).toISOString().substring(0, 10)}
                 onChange={(e) => setApplyFields(prev => ({ ...prev, endDate: e.target.valueAsNumber }))} />

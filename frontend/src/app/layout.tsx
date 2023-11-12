@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import '../styles/styles.scss';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from 'react-toastify';
 import { Web3ContextProvider } from 'src/contexts/Web3Context';
 
